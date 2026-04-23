@@ -1,53 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Next Meetup</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=DM+Sans&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 
 <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --cream:#F7F3EC;
+  --ink:#1A1612;
+  --muted:#7A6E62;
+  --border:rgba(26,22,18,0.12);
+}
+
 body{
   font-family:'DM Sans',sans-serif;
-  background:#F7F3EC;
-  color:#1A1612;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  background:var(--cream);
+  color:var(--ink);
   height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   text-align:center;
 }
 
-h1{
+.container{
+  position:relative;
+}
+
+.line{
+  position:absolute;
+  left:50%;
+  top:0;
+  transform:translateX(-50%);
+  width:1px;
+  height:100%;
+  background:var(--border);
+}
+
+.title{
   font-family:'Playfair Display',serif;
-  font-size:3rem;
+  font-size:clamp(2.8rem,8vw,5rem);
+  margin-bottom:10px;
+}
+
+.date{
+  color:var(--muted);
+  margin-bottom:30px;
 }
 
 .timer{
   display:flex;
-  gap:20px;
+  gap:30px;
   justify-content:center;
-  margin-top:20px;
 }
 
 .unit{
-  font-size:2rem;
+  text-align:center;
+}
+
+.num{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(3rem,8vw,5rem);
 }
 </style>
 </head>
 
 <body>
 
-<div>
-  <h1>Next Meetup</h1>
-  <div id="date"></div>
+<div class="container">
+  <div class="line"></div>
+
+  <div class="title">Next Meetup</div>
+  <div class="date" id="date"></div>
 
   <div class="timer">
-    <div class="unit"><span id="d">00</span><br>Days</div>
-    <div class="unit"><span id="h">00</span><br>Hours</div>
-    <div class="unit"><span id="m">00</span><br>Min</div>
-    <div class="unit"><span id="s">00</span><br>Sec</div>
+    <div class="unit"><div class="num" id="d">00</div>Days</div>
+    <div class="unit"><div class="num" id="h">00</div>Hours</div>
+    <div class="unit"><div class="num" id="m">00</div>Min</div>
+    <div class="unit"><div class="num" id="s">00</div>Sec</div>
   </div>
 </div>
 
@@ -57,7 +94,8 @@ const TARGET = new Date('2026-05-03T21:00:00').getTime();
 function pad(n){return String(n).padStart(2,'0')}
 
 function update(){
-  const diff = TARGET - Date.now();
+  const now = Date.now();
+  const diff = TARGET - now;
 
   if(diff <= 0){
     document.body.innerHTML = "<h1>It's time!</h1>";
@@ -72,7 +110,14 @@ function update(){
   document.getElementById('s').textContent = pad(ts%60);
 
   document.getElementById('date').textContent =
-    new Date(TARGET).toLocaleString();
+    new Date(TARGET).toLocaleString(undefined,{
+      weekday:'long',
+      year:'numeric',
+      month:'long',
+      day:'numeric',
+      hour:'2-digit',
+      minute:'2-digit'
+    });
 }
 
 setInterval(update,1000);
