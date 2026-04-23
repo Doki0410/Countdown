@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Next Meetup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#F7F3EC;--ink:#1A1612;--warm:#C8A97E;--warm-light:#E8D9C0;
+  --muted:#7A6E62;--surface:#EFEAE1;--border:rgba(26,22,18,0.12);--red:#C0392B;
+}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex}
+
+/* ── VIEWER ── */
+#viewer-screen{flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;position:relative;text-align:center;overflow:hidden}
+.v-bg-line{position:absolute;top:0;left:50%;transform:translateX(-50%);width:1px;height:100%;background:var(--border);pointer-events:none}
+.v-tag{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--warm);margin-bottom:.75rem;font-weight:500}
+.v-title{font-family:'Playfair Display',serif;font-size:clamp(2.8rem,8vw,5rem);font-weight:400;line-height:1.05;color:var(--ink);margin-bottom:.3rem}
+.v-title em{font-style:italic;color:var(--warm)}
+.v-date-display{font-size:.85rem;color:var(--muted);margin-bottom:3rem;letter-spacing:.06em;min-height:1.2em}
+.v-divider{width:40px;height:1px;background:var(--warm-light);margin:0 auto 3rem}
+.v-units{display:flex;gap:clamp(1.5rem,4vw,3.5rem);align-items:flex-end;margin-bottom:3rem}
+.v-unit{text-align:center}
+.v-num{font-family:'Playfair Display',serif;font-size:clamp(3rem,10vw,6rem);font-weight:700;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.v-num.tick{animation:numtick .15s ease}
+@keyframes numtick{0%{transform:translateY(-4px);opacity:.5}100%{transform:translateY(0);opacity:1}}
+.v-sep{font-family:'Playfair Display',serif;font-size:clamp(2.5rem,8vw,4.5rem);font-weight:400;color:var(--warm-light);padding-bottom:.5rem;line-height:1}
+.v-lbl{font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-weight:400}
+.v-seconds-row{display:flex;align-items:center;gap:12px;margin-bottom:2.5rem}
+.v-seclabel{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.v-track{width:160px;height:3px;background:var(--warm-light);border-radius:2px;overflow:hidden}
+.v-fill{height:100%;background:var(--warm);border-radius:2px;transition:width 1s linear}
+.v-status{font-size:.68rem;color:var(--warm-light);letter-spacing:.08em;text-transform:uppercase;margin-top:.5rem;min-height:1em;transition:color .3s}
+.v-status.live{color:var(--warm)}
+.v-admin-hint{font-size:.72rem;color:var(--warm-light);letter-spacing:.06em;cursor:pointer;position:fixed;bottom:1.5rem;right:1.5rem;transition:color .2s;user-select:none}
+.v-admin-hint:hover{color:var(--warm)}
+.v-no-date{font-family:'Playfair Display',serif;font-size:1.3rem;font-style:italic;color:var(--muted)}
+.v-expired{text-align:center}
+.v-expired-big{font-family:'Playfair Display',serif;font-size:clamp(2rem,6vw,3.5rem);font-weight:400;font-style:italic;color:var(--ink);margin-bottom:.5rem}
+.v-expired-sub{font-size:.85rem;color:var(--muted);letter-spacing:.04em}
+
+/* ── PIN ── */
+#pin-screen{flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--cream)}
+.pin-ornament{width:48px;height:2px;background:var(--warm);margin:0 auto 2rem}
+.pin-title{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);font-weight:400;text-align:center;margin-bottom:.4rem}
+.pin-sub{font-size:.85rem;color:var(--muted);text-align:center;margin-bottom:2.5rem;letter-spacing:.04em}
+.pin-dots{display:flex;gap:14px;margin-bottom:2rem;justify-content:center}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--warm);background:transparent;transition:background .15s}
+.pin-dot.filled{background:var(--warm)}
+.pin-dot.error{border-color:var(--red);background:var(--red);animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;width:100%}
+.pin-key{aspect-ratio:1;border:1px solid var(--border);border-radius:12px;background:white;font-size:1.3rem;font-weight:500;cursor:pointer;transition:background .1s,transform .1s;color:var(--ink);font-family:'DM Sans',sans-serif}
+.pin-key:hover{background:var(--surface)}
+.pin-key:active{transform:scale(.94);background:var(--warm-light)}
+.pin-key.del{font-size:1rem;color:var(--muted)}
+.pin-key.empty{visibility:hidden}
+.pin-back{margin-top:1.5rem;font-size:.8rem;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:center}
+.pin-back:hover{color:var(--ink)}
+
+/* ── ADMIN ── */
+#admin-screen{flex-direction:column;min-height:100vh;background:var(--ink);color:var(--cream)}
+.a-header{padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
+.a-header-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:400;letter-spacing:.02em;color:var(--cream)}
+.a-badge{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:var(--warm);color:var(--ink);padding:4px 10px;border-radius:20px;font-weight:500}
+.a-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1.5rem;gap:2rem}
+.a-current{text-align:center}
+.a-current-label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:.5rem}
+.a-current-val{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:400;color:var(--warm)}
+.a-preview-units{display:flex;gap:2rem;align-items:flex-end}
+.a-preview-unit{text-align:center}
+.a-preview-num{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:700;color:var(--cream);font-variant-numeric:tabular-nums;line-height:1}
+.a-preview-lbl{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-top:4px}
+.a-preview-sep{font-family:'Playfair Display',serif;font-size:2.2rem;color:rgba(255,255,255,.15);padding-bottom:.4rem;line-height:1;font-weight:400}
+.a-form{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1.5rem;width:100%;max-width:420px}
+.a-form-title{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:1.25rem}
+.a-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.a-field{display:flex;flex-direction:column;gap:4px}
+.a-field label{font-size:.72rem;letter-spacing:.08em;color:rgba(255,255,255,.4);text-transform:uppercase}
+.a-field input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--cream);outline:none;transition:border-color .2s}
+.a-field input:focus{border-color:var(--warm)}
+.a-field input::-webkit-calendar-picker-indicator{filter:invert(.7);cursor:pointer}
+.a-btn{width:100%;padding:13px;background:var(--warm);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;color:var(--ink);cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.02em}
+.a-btn:hover{opacity:.88}
+.a-btn:active{transform:scale(.98)}
+.a-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.a-pin-section{width:100%;max-width:420px}
+.a-pin-toggle{font-size:.75rem;color:rgba(255,255,255,.25);cursor:pointer;letter-spacing:.06em;text-decoration:underline;text-underline-offset:3px;text-align:center;display:block;transition:color .2s}
+.a-pin-toggle:hover{color:rgba(255,255,255,.5)}
+.a-pin-change{display:none;margin-top:1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.25rem}
+.a-ghost-btn{width:100%;padding:11px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.5);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;transition:border-color .2s,color .2s;margin-top:2px}
+.a-ghost-btn:hover{border-color:rgba(255,255,255,.35);color:var(--cream)}
+.a-toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--warm);color:var(--ink);padding:10px 20px;border-radius:20px;font-size:.85rem;font-weight:500;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.a-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.a-logout{padding:1rem 2rem;text-align:center;border-top:1px solid rgba(255,255,255,.06)}
+.a-logout-btn{font-size:.78rem;color:rgba(255,255,255,.25);cursor:pointer;letter-spacing:.06em;transition:color .2s;background:none;border:none;font-family:'DM Sans',sans-serif}
+.a-logout-btn:hover{color:rgba(255,255,255,.5)}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--cream);text-align:center}
+.setup-ornament{width:48px;height:2px;background:var(--warm);margin:0 auto 2rem}
+.setup-title{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.4rem);font-weight:400;margin-bottom:.5rem}
+.setup-sub{font-size:.9rem;color:var(--muted);margin-bottom:2.5rem;line-height:1.6;max-width:340px}
+.setup-form{background:white;border:1px solid var(--border);border-radius:16px;padding:1.75rem;width:100%;max-width:380px;text-align:left}
+.setup-field{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
+.setup-field label{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.setup-field input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--ink);outline:none;transition:border-color .2s}
+.setup-field input:focus{border-color:var(--warm)}
+.setup-btn{width:100%;padding:13px;background:var(--warm);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;color:var(--ink);cursor:pointer;transition:opacity .2s;margin-top:.5rem}
+.setup-btn:hover{opacity:.85}
+.setup-hint{font-size:.75rem;color:var(--muted);margin-top:1.25rem;line-height:1.6}
+.setup-hint strong{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- ═══ VIEWER ═══ -->
+<div id="viewer-screen" class="screen">
+  <div class="v-bg-line"></div>
+  <div class="v-tag">Counting down to</div>
+  <h1 class="v-title">Next <em>Meetup</em></h1>
+  <div class="v-date-display" id="v-date-display">—</div>
+  <div class="v-divider"></div>
+
+  <div id="v-nodate" class="v-no-date" style="display:none">No date set yet.</div>
+
+  <div id="v-timer" style="display:none;flex-direction:column;align-items:center">
+    <div class="v-units">
+      <div class="v-unit"><div class="v-num" id="v-d">00</div><div class="v-lbl">Days</div></div>
+      <div class="v-sep">:</div>
+      <div class="v-unit"><div class="v-num" id="v-h">00</div><div class="v-lbl">Hours</div></div>
+      <div class="v-sep">:</div>
+      <div class="v-unit"><div class="v-num" id="v-m">00</div><div class="v-lbl">Min</div></div>
+      <div class="v-sep">:</div>
+      <div class="v-unit"><div class="v-num" id="v-s">00</div><div class="v-lbl">Sec</div></div>
+    </div>
+    <div class="v-seconds-row">
+      <span class="v-seclabel">This minute</span>
+      <div class="v-track"><div class="v-fill" id="v-fill"></div></div>
+      <span class="v-seclabel" id="v-totalsec">—</span>
+    </div>
+  </div>
+
+  <div id="v-expired" style="display:none" class="v-expired">
+    <div class="v-expired-big">It's time!</div>
+    <div class="v-expired-sub">Check back for the next one.</div>
+  </div>
+
+  <div class="v-status" id="v-status"></div>
+  <span class="v-admin-hint" onclick="goToPin()">⚙</span>
+</div>
+
+<!-- ═══ PIN ═══ -->
+<div id="pin-screen" class="screen">
+  <div class="pin-ornament"></div>
+  <div class="pin-title">Admin Access</div>
+  <div class="pin-sub">Enter your PIN to continue</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-back" onclick="goToViewer()">← Back to viewer</div>
+</div>
+
+<!-- ═══ ADMIN ═══ -->
+<div id="admin-screen" class="screen">
+  <div class="a-header">
+    <span class="a-header-title">Next Meetup — Admin</span>
+    <span class="a-badge">Owner</span>
+  </div>
+  <div class="a-body">
+    <div class="a-current">
+      <div class="a-current-label">Current target</div>
+      <div class="a-current-val" id="a-current-val">Not set</div>
+    </div>
+    <div class="a-preview-units">
+      <div class="a-preview-unit"><div class="a-preview-num" id="a-d">--</div><div class="a-preview-lbl">Days</div></div>
+      <div class="a-preview-sep">:</div>
+      <div class="a-preview-unit"><div class="a-preview-num" id="a-h">--</div><div class="a-preview-lbl">Hours</div></div>
+      <div class="a-preview-sep">:</div>
+      <div class="a-preview-unit"><div class="a-preview-num" id="a-m">--</div><div class="a-preview-lbl">Min</div></div>
+      <div class="a-preview-sep">:</div>
+      <div class="a-preview-unit"><div class="a-preview-num" id="a-s">--</div><div class="a-preview-lbl">Sec</div></div>
+    </div>
+    <div class="a-form">
+      <div class="a-form-title">Set new date &amp; time</div>
+      <div class="a-row">
+        <div class="a-field"><label>Date</label><input type="date" id="a-inp-date"/></div>
+        <div class="a-field"><label>Time</label><input type="time" id="a-inp-time"/></div>
+      </div>
+      <button class="a-btn" id="a-set-btn" onclick="adminSet()">Update countdown</button>
+    </div>
+    <div class="a-pin-section">
+      <span class="a-pin-toggle" onclick="togglePinChange()">Change PIN</span>
+      <div class="a-pin-change" id="pin-change-box">
+        <div class="a-form-title" style="margin-bottom:1rem">Change your PIN</div>
+        <div class="a-row">
+          <div class="a-field"><label>New PIN (4 digits)</label><input type="password" id="new-pin" maxlength="4" inputmode="numeric" placeholder="••••"/></div>
+          <div class="a-field"><label>Confirm PIN</label><input type="password" id="confirm-pin" maxlength="4" inputmode="numeric" placeholder="••••"/></div>
+        </div>
+        <button class="a-ghost-btn" onclick="changePin()">Save new PIN</button>
+      </div>
+    </div>
+  </div>
+  <div class="a-logout"><button class="a-logout-btn" onclick="logout()">Sign out</button></div>
+  <div class="a-toast" id="toast"></div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────
+   STORAGE — uses JSONBin.io as a free
+   shared key-value store so the date
+   syncs across all devices in real time.
+   Free tier: 10,000 reads/month — plenty.
+───────────────────────────────────────── */
+
+const BIN_KEY    = 'meetup_bin_id';
+const PIN_KEY    = 'meetup_pin';
+const SETUP_KEY  = 'meetup_setup_done';
+const JSONBIN_API = 'https://api.jsonbin.io/v3/b';
+/* Public read key — safe to expose. Only you can write (via Master Key stored locally). */
+const ACCESS_KEY = '$2a$10$dummyPublicKeyReplacedAtRuntime';
+
+let PIN    = lsGet(PIN_KEY, null);
+let BIN_ID = lsGet(BIN_KEY, null);
+let MASTER_KEY = lsGet('meetup_mk', null);
+let TARGET = new Date('2026-05-03T21:00:00').getTime();
+let pinBuffer = '', viewerInterval = null, adminInterval = null, pollInterval = null, cur = 'viewer';
+const pad = n => String(n).padStart(2,'0');
+
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+/* ── JSONBIN HELPERS ── */
+async function createBin(data){
+  const r = await fetch(JSONBIN_API, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY,'X-Bin-Private':'false'},
+    body: JSON.stringify(data)
+  });
+  const j = await r.json();
+  return j.metadata?.id || null;
+}
+
+async function readBin(){
+  if(!BIN_ID) return null;
+  try{
+    const r = await fetch(`${JSONBIN_API}/${BIN_ID}/latest`,{
+      headers:{'X-Access-Key': lsGet('meetup_ak','')}
+    });
+    const j = await r.json();
+    return j.record || null;
+  }catch(e){return null}
+}
+
+async function updateBin(data){
+  if(!BIN_ID) return false;
+  try{
+    const r = await fetch(`${JSONBIN_API}/${BIN_ID}`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
+      body: JSON.stringify(data)
+    });
+    return r.ok;
+  }catch(e){return false}
+}
+
+/* ── SCREEN NAV ── */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id+'-screen').classList.add('active');
+  cur=id;
+}
+function goToViewer(){showScreen('viewer');startViewerTick();startPolling()}
+function goToPin(){pinBuffer='';updatePinDots();stopPolling();showScreen('pin')}
+function goToAdmin(){showScreen('admin');updateAdminCurrent();prefillAdminForm();startAdminTick()}
+function logout(){clearInterval(adminInterval);goToViewer()}
+
+/* ── FIRST-TIME SETUP ── */
+function completeSetup(){
+  const p1 = document.getElementById('setup-pin').value;
+  const p2 = document.getElementById('setup-pin2').value;
+  if(!/^\d{4}$/.test(p1)){alert('PIN must be exactly 4 digits.');return}
+  if(p1!==p2){alert("PINs don't match — try again.");return}
+  PIN = p1; lsSet(PIN_KEY, PIN);
+  lsSet(SETUP_KEY, true);
+  /* No JSONBin configured yet — go straight to viewer, storage is localStorage only until they add a key */
+  goToViewer();
+}
+
+/* ── PIN ── */
+function pinPress(d){
+  if(pinBuffer.length>=4)return;
+  pinBuffer+=d; updatePinDots();
+  if(pinBuffer.length===4) setTimeout(()=>{
+    if(pinBuffer===PIN){goToAdmin();pinBuffer='';updatePinDots()}
+    else{errorPinDots();setTimeout(()=>{pinBuffer='';updatePinDots()},600)}
+  },100);
+}
+function pinDel(){pinBuffer=pinBuffer.slice(0,-1);updatePinDots()}
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('d'+i);
+    d.classList.remove('filled','error');
+    if(i<pinBuffer.length)d.classList.add('filled');
+  }
+}
+function errorPinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('d'+i);
+    d.classList.remove('filled');d.classList.add('error');
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(cur!=='pin')return;
+  if(e.key>='0'&&e.key<='9')pinPress(e.key);
+  else if(e.key==='Backspace')pinDel();
+});
+
+/* ── SYNC ── */
+async function syncFromRemote(){
+  if(BIN_ID && MASTER_KEY){
+    const data = await readBin();
+    if(data && data.target) TARGET = data.target;
+  } else {
+    TARGET = lsGet('meetup_target_local', TARGET);
+  }
+}
+
+async function pushToRemote(ts){
+  TARGET = ts;
+  lsSet('meetup_target_local', ts);
+  if(BIN_ID && MASTER_KEY){
+    await updateBin({target: ts});
+  }
+}
+
+function startPolling(){
+  stopPolling();
+  if(BIN_ID && MASTER_KEY){
+    pollInterval = setInterval(async()=>{
+      await syncFromRemote();
+    }, 10000);
+  }
+}
+function stopPolling(){clearInterval(pollInterval)}
+
+/* ── VIEWER TICK ── */
+function startViewerTick(){clearInterval(viewerInterval);viewerTick();viewerInterval=setInterval(viewerTick,1000)}
+
+function viewerTick(){
+  const nodate=document.getElementById('v-nodate');
+  const timer=document.getElementById('v-timer');
+  const exp=document.getElementById('v-expired');
+  const disp=document.getElementById('v-date-display');
+  const status=document.getElementById('v-status');
+
+  if(BIN_ID && MASTER_KEY) status.textContent=''; else status.textContent='Local mode — see setup guide to share online';
+
+  if(!TARGET){
+    nodate.style.display='';timer.style.display='none';exp.style.display='none';
+    disp.textContent='—';return;
+  }
+
+  const diff=TARGET-Date.now();
+  disp.textContent=new Date(TARGET).toLocaleString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  if(diff<=0){
+    nodate.style.display='none';timer.style.display='none';exp.style.display='';return;
+  }
+  nodate.style.display='none';exp.style.display='none';timer.style.display='flex';
+
+  const ts=Math.floor(diff/1000);
+  const prevS=document.getElementById('v-s').textContent;
+  const newS=pad(ts%60);
+  document.getElementById('v-d').textContent=pad(Math.floor(ts/86400));
+  document.getElementById('v-h').textContent=pad(Math.floor((ts%86400)/3600));
+  document.getElementById('v-m').textContent=pad(Math.floor((ts%3600)/60));
+  document.getElementById('v-s').textContent=newS;
+
+  if(prevS!==newS){
+    const el=document.getElementById('v-s');
+    el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick');
+  }
+  document.getElementById('v-fill').style.width=((59-ts%60)/59*100).toFixed(1)+'%';
+  document.getElementById('v-totalsec').textContent=ts.toLocaleString()+'s';
+}
+
+/* ── ADMIN TICK ── */
+function startAdminTick(){clearInterval(adminInterval);adminTick();adminInterval=setInterval(adminTick,1000)}
+function adminTick(){
+  if(!TARGET){['a-d','a-h','a-m','a-s'].forEach(id=>document.getElementById(id).textContent='--');return}
+  const ts=Math.max(0,Math.floor((TARGET-Date.now())/1000));
+  document.getElementById('a-d').textContent=pad(Math.floor(ts/86400));
+  document.getElementById('a-h').textContent=pad(Math.floor((ts%86400)/3600));
+  document.getElementById('a-m').textContent=pad(Math.floor((ts%3600)/60));
+  document.getElementById('a-s').textContent=pad(ts%60);
+}
+
+function updateAdminCurrent(){
+  const el=document.getElementById('a-current-val');
+  el.textContent=TARGET
+    ?new Date(TARGET).toLocaleString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+    :'Not set';
+}
+
+function prefillAdminForm(){
+  const d=TARGET?new Date(TARGET):new Date();
+  document.getElementById('a-inp-date').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  document.getElementById('a-inp-time').value=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function adminSet(){
+  const dv=document.getElementById('a-inp-date').value;
+  const tv=document.getElementById('a-inp-time').value||'00:00';
+  if(!dv){showToast('Please pick a date!');return}
+  const btn=document.getElementById('a-set-btn');
+  btn.disabled=true;btn.textContent='Saving...';
+  const ts=new Date(`${dv}T${tv}`).getTime();
+  await pushToRemote(ts);
+  updateAdminCurrent();
+  btn.disabled=false;btn.textContent='Update countdown';
+  showToast(BIN_ID?'Updated for everyone! ✓':'Saved locally — add JSONBin key to sync ✓');
+}
+
+function togglePinChange(){
+  const box=document.getElementById('pin-change-box');
+  box.style.display=box.style.display==='block'?'none':'block';
+}
+
+function changePin(){
+  const np=document.getElementById('new-pin').value;
+  const cp=document.getElementById('confirm-pin').value;
+  if(!/^\d{4}$/.test(np)){showToast('PIN must be 4 digits.');return}
+  if(np!==cp){showToast("PINs don't match.");return}
+  PIN=np;lsSet(PIN_KEY,PIN);
+  document.getElementById('new-pin').value='';
+  document.getElementById('confirm-pin').value='';
+  document.getElementById('pin-change-box').style.display='none';
+  showToast('PIN updated!');
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ── INIT ── */
+async function init(){
+  const setupDone = lsGet(SETUP_KEY, false);
+  await syncFromRemote();
+  if(!setupDone || !PIN){
+    showScreen('setup');
+  } else {
+    goToViewer();
+  }
+}
+init();
+</script>
+</body>
+</html>
